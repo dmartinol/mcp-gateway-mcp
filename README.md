@@ -20,13 +20,14 @@ Target audience: platform engineers operating a running gateway.
 
 | URI | Description |
 |---|---|
-| `ui://catalog/mcp-app.html` | Interactive tool catalog rendered as a sandboxed iframe by MCP Apps-compatible hosts (Cursor, Claude Desktop, VS Code Copilot, …) |
+| `ui://mcp-gateway-catalog` | Interactive tool catalog rendered as a sandboxed iframe by MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, …) |
 
 See [sample-prompts.md](sample-prompts.md) for example queries for each tool.
 
 ## Requirements
 
-- Go 1.22+
+- Python 3.11+
+- [`uv`](https://docs.astral.sh/uv/) for dependency management
 - Kubeconfig pointing to a cluster running `mcp-gateway` CRDs
 - (Optional) Port-forward to the broker for live status
 
@@ -35,10 +36,10 @@ See [sample-prompts.md](sample-prompts.md) for example queries for each tool.
 | Flag | Env var | Default | Notes |
 |---|---|---|---|
 | `--kubeconfig` | `KUBECONFIG` | `~/.kube/config` | Falls back to in-cluster config |
-| `--namespace` | `MCP_ADMIN_NAMESPACE` | `mcp-system` | Namespace where `MCPServerRegistration` / `MCPVirtualServer` CRDs live (use `mcp-servers` on the hosted cluster) |
+| `--namespace` | `MCP_ADMIN_NAMESPACE` | `mcp-servers` | Namespace where `MCPServerRegistration` / `MCPVirtualServer` CRDs live |
 | `--broker-url` | `MCP_BROKER_URL` | `http://localhost:8080` | Broker `/status` endpoint |
-| `--transport` | `MCP_ADMIN_TRANSPORT` | `stdio` | `stdio` or `sse` |
-| `--sse-addr` | `MCP_ADMIN_SSE_ADDR` | `:8899` | SSE bind address |
+| `--transport` | `MCP_ADMIN_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `--addr` | `MCP_ADMIN_ADDR` | `:8899` | HTTP bind address (used when `--transport http`) |
 
 ## Quick start (hosted cluster)
 
@@ -46,14 +47,14 @@ See [sample-prompts.md](sample-prompts.md) for example queries for each tool.
 # Forward the broker port
 kubectl port-forward svc/mcp-gateway -n mcp-gateway-system 8080:8080 &
 
-# Build
-make build
+# Install dependencies
+uv sync
 
 # Run (stdio — for Claude Desktop / Cursor)
-./bin/mcp-gateway-admin --namespace mcp-servers --broker-url http://localhost:8080
+uv run server.py --namespace mcp-servers --broker-url http://localhost:8080
 
-# Run (SSE — for MCP Inspector)
-make run-sse
+# Run (HTTP — for MCP Inspector)
+uv run server.py --transport http --namespace mcp-servers --broker-url http://localhost:8080
 ```
 
 ## Claude Desktop config
@@ -62,8 +63,10 @@ make run-sse
 {
   "mcpServers": {
     "mcp-admin": {
-      "command": "/path/to/mcp-gateway-mcp/bin/mcp-gateway-admin",
-      "args": ["--namespace", "mcp-servers", "--broker-url", "http://localhost:8080"]
+      "command": "uv",
+      "args": ["run", "/path/to/mcp-gateway-mcp/server.py",
+               "--namespace", "mcp-servers",
+               "--broker-url", "http://localhost:8080"]
     }
   }
 }
@@ -75,8 +78,10 @@ make run-sse
 {
   "mcpServers": {
     "gateway-admin": {
-      "command": "/path/to/mcp-gateway-mcp/bin/mcp-gateway-admin",
-      "args": ["--namespace", "mcp-servers", "--broker-url", "http://localhost:8080"]
+      "command": "uv",
+      "args": ["run", "/path/to/mcp-gateway-mcp/server.py",
+               "--namespace", "mcp-servers",
+               "--broker-url", "http://localhost:8080"]
     }
   }
 }
@@ -89,11 +94,4 @@ make run-sse
 | Gateway public URL | `https://mcp.apps.hosted-services.ai5.appeng.rhecoeng.com` |
 | CRD namespace | `mcp-servers` |
 | Broker service | `svc/mcp-gateway` in `mcp-gateway-system` (port 8080) |
-| Registered servers | `assisted-service-mcp` (20 tools, prefix `assisted_`), `insights-mcp` (15 tools, prefix `insights_`) |
-
-## Build
-
-```bash
-make build   # outputs bin/mcp-gateway-admin
-go vet ./...
-```
+| Registered servers | `assisted-service-mcp` (24 tools, prefix `assisted_`), `insights-mcp` (16 tools, prefix `insights_`) |

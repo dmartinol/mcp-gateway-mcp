@@ -19,7 +19,7 @@ Seven MCP tools and one MCP resource:
 
 | Resource | Description |
 |---|---|
-| `ui://catalog/mcp-app.html` | MCP App UI (MIME `text/html;profile=mcp-app`): interactive catalog rendered in a sandboxed iframe by MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, etc.) |
+| `ui://mcp-gateway-catalog` | MCP App UI (MIME `text/html;profile=mcp-app`): interactive catalog rendered in a sandboxed iframe by MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, etc.) |
 
 ## Project layout
 
@@ -116,6 +116,30 @@ design system. Before writing any UI code:
      hardcode hex values or pixel sizes that diverge from the design system.
    - Follow PatternFly's accessibility standards (WCAG 2.1 AA): semantic HTML, ARIA roles where
      needed, keyboard navigation for all interactive elements.
-   - The MCP App HTML (`ui://catalog/mcp-app.html`) runs in a sandboxed iframe — load PatternFly
+   - The MCP App HTML (`ui://mcp-gateway-catalog`) runs in a sandboxed iframe — load PatternFly
      from a CDN (e.g., `unpkg.com`) and keep the bundle minimal (CSS + relevant JS only).
    - Match the visual language of the Red Hat Hybrid Cloud Console where the gateway is deployed.
+
+4. **Chat-embedded iframe constraints** — the MCP App iframe is auto-sized by the host to its
+   content height. Design to a total height of ~420px so the host does not add its own scrollbar:
+   - Use compact density: **13px** base font, **5px** vertical / **12px** horizontal row padding.
+   - Apply a **fixed `max-height` (e.g. 300px) with `overflow-y: auto`** on the scrollable tool
+     list — do not use `vh` units, which expand with the iframe's own viewport.
+   - **Two scrollbars (iframe + inner container) is a UX defect** — if the inner list scrolls, the
+     total page height must fit the host view without an outer scroll.
+   - Use horizontal **tabs** (`pf-v6-c-tabs`) for server selection instead of a sidebar; tabs
+     preserve the full width for content and work naturally with auto-height iframes.
+
+5. **PatternFly CSS in sandboxed iframes** — `<link rel="stylesheet">` is silently blocked by the
+   host's CSP (only `script-src` honours `resource_domains`). Workaround:
+   - Fetch the CSS via `fetch()` in a `<script type="module">` (allowed because `script-src`
+     covers the same CDN origin).
+   - Inject the CSS text as an inline `<style>` **before** your custom `<style>` block so PF
+     tokens win in the cascade and your overrides follow.
+   - Always include inline token fallbacks in `:root { … }` so the page looks correct even if the
+     CDN fetch fails (e.g. offline or CSP tightened further in future).
+
+6. **In-memory MCP sessions** — FastMCP StreamableHTTP stores sessions in memory. Restarting the
+   server clears all sessions; clients auto-reinitialize within ~60 s. HTML changes in
+   `tool_catalog.py` require a server restart to take effect (the resource is re-evaluated on
+   every request, but new HTML only appears after the process reloads the module).
