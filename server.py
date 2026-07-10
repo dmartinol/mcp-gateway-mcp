@@ -40,11 +40,15 @@ def main():
 
     mcp = FastMCP("mcp-gateway-admin")
 
-    from tools import registrations, virtual_servers, gateway_status, tool_catalog
+    from tools import (registrations, virtual_servers, gateway_status, tool_catalog,
+                        registration_ui, gateway_health_ui, virtual_servers_ui)
     registrations.register(mcp, admin)
     virtual_servers.register(mcp, admin)
     gateway_status.register(mcp, admin)
     tool_catalog.register(mcp, admin)
+    registration_ui.register(mcp, admin)
+    gateway_health_ui.register(mcp, admin)
+    virtual_servers_ui.register(mcp, admin)
 
     if args.transport == "http":
         from starlette.middleware.cors import CORSMiddleware
