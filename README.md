@@ -1,6 +1,6 @@
 # mcp-gateway-mcp
 
-Admin MCP server for the [mcp-gateway](../mcp-gateway) platform. Exposes Kubernetes CRD state and live broker status as MCP tools and browser-renderable UI widgets — no `kubectl` required.
+Admin MCP server for the [mcp-gateway](https://github.com/Kuadrant/mcp-gateway) platform. Exposes Kubernetes CRD state and live broker status as MCP tools and browser-renderable UI widgets — no `kubectl` required.
 
 Target audience: platform engineers operating a running gateway.
 
