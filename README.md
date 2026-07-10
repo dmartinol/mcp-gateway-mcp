@@ -49,18 +49,18 @@ Accordion view of `MCPVirtualServer` CRs showing upstreams, status conditions, a
 <details>
 <summary>10 tools — click to expand</summary>
 
-| Tool | Description |
-|---|---|
-| `list_registrations` | List all `MCPServerRegistration` CRs |
-| `get_registration` | Get a single registration with status conditions |
-| `update_registration_state` | Enable or disable a registration |
-| `list_virtual_servers` | List all `MCPVirtualServer` CRs |
-| `get_virtual_server` | Get a single virtual server |
-| `get_gateway_status` | Call the broker `/status` endpoint |
-| `render_tool_catalog` | Open the interactive tool catalog widget |
-| `render_registrations` | Open the registration manager widget |
-| `render_gateway_health` | Open the gateway health dashboard widget |
-| `render_virtual_servers` | Open the virtual server viewer widget |
+| Tool | Access | Description |
+|---|:---:|---|
+| `list_registrations` | 📖 read | List all `MCPServerRegistration` CRs |
+| `get_registration` | 📖 read | Get a single registration with status conditions |
+| `update_registration_state` | ✏️ write | Enable or disable a registration |
+| `list_virtual_servers` | 📖 read | List all `MCPVirtualServer` CRs |
+| `get_virtual_server` | 📖 read | Get a single virtual server |
+| `get_gateway_status` | 📖 read | Call the broker `/status` endpoint |
+| `render_tool_catalog` | 📖 read | Open the interactive tool catalog widget |
+| `render_registrations` | ✏️ write | Open the registration manager widget (toggle switches mutate state) |
+| `render_gateway_health` | 📖 read | Open the gateway health dashboard widget |
+| `render_virtual_servers` | 📖 read | Open the virtual server viewer widget |
 
 </details>
 
