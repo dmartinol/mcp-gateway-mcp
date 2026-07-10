@@ -24,31 +24,33 @@ Seven MCP tools and one MCP resource:
 ## Project layout
 
 ```
-main.go                     # entry point: flags, k8s client, MCP server wiring
-internal/admin/
-  server.go                 # Server struct, RegisterTools
-  registrations.go          # list_registrations, get_registration, update_registration_state
-  virtualservers.go         # list_virtual_servers, get_virtual_server
-  gateway_status.go         # get_gateway_status
-  tool_catalog.go           # render_tool_catalog (self-contained HTML)
+server.py                   # entry point: args, k8s client, FastMCP wiring
+tools/
+  __init__.py
+  registrations.py          # list_registrations, get_registration, update_registration_state
+  virtual_servers.py        # list_virtual_servers, get_virtual_server
+  gateway_status.py         # get_gateway_status
+  tool_catalog.py           # render_tool_catalog + ui://catalog/mcp-app.html resource
+pyproject.toml              # dependencies (fastmcp, kubernetes, uvicorn)
 Makefile
 ```
 
 ## Dependencies
 
-- `github.com/Kuadrant/mcp-gateway` — CRD types (`api/v1alpha1`), referenced via `replace` directive in `go.mod` pointing to `../mcp-gateway`
-- `github.com/mark3labs/mcp-go` — MCP server and tool primitives
-- `sigs.k8s.io/controller-runtime` — Kubernetes client
+- `fastmcp` — MCP server and tool/resource primitives
+- `kubernetes` — Python Kubernetes client for CRD access
+- `uvicorn` — ASGI server for HTTP transport
+- `requests` — HTTP client for broker status calls
 
 ## Configuration
 
 | Flag | Env var | Default | Notes |
 |---|---|---|---|
 | `--kubeconfig` | `KUBECONFIG` | `~/.kube/config` | Falls back to in-cluster config |
-| `--namespace` | `MCP_ADMIN_NAMESPACE` | `mcp-system` | Namespace where CRDs live — use `mcp-servers` on the hosted cluster |
+| `--namespace` | `MCP_ADMIN_NAMESPACE` | `mcp-servers` | Namespace where CRDs live |
 | `--broker-url` | `MCP_BROKER_URL` | `http://localhost:8080` | Broker status endpoint |
-| `--transport` | `MCP_ADMIN_TRANSPORT` | `stdio` | `stdio` or `sse` |
-| `--sse-addr` | `MCP_ADMIN_SSE_ADDR` | `:8899` | SSE bind address |
+| `--transport` | `MCP_ADMIN_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `--addr` | `MCP_ADMIN_ADDR` | `:8899` | HTTP bind address |
 
 ## Running locally against the hosted cluster
 
@@ -56,12 +58,12 @@ Makefile
 # Forward the broker port
 kubectl port-forward svc/mcp-gateway -n mcp-gateway-system 8080:8080 &
 
-# Build and run (stdio for Claude Desktop)
-make build
-./bin/mcp-gateway-admin --namespace mcp-servers --broker-url http://localhost:8080
+# Install dependencies and run (stdio for Claude Desktop)
+uv sync
+uv run server.py --namespace mcp-servers --broker-url http://localhost:8080
 
-# Or SSE for MCP Inspector
-make run-sse
+# Or HTTP transport for MCP Inspector
+uv run server.py --transport http --namespace mcp-servers
 ```
 
 ## Claude Desktop config
@@ -70,8 +72,10 @@ make run-sse
 {
   "mcpServers": {
     "mcp-admin": {
-      "command": "/path/to/mcp-gateway-mcp/bin/mcp-gateway-admin",
-      "args": ["--namespace", "mcp-servers", "--broker-url", "http://localhost:8080"]
+      "command": "uv",
+      "args": ["run", "/path/to/mcp-gateway-mcp/server.py",
+               "--namespace", "mcp-servers",
+               "--broker-url", "http://localhost:8080"]
     }
   }
 }
@@ -87,19 +91,31 @@ make run-sse
 
 ## Code conventions
 
-- Match the style of `../mcp-gateway`: terse lowercase comments, idiomatic Go, no emojis
-- All tool handlers on `*Server` — no package-level state
-- Return JSON via `mcp.NewToolResultText(jsonString)` for text tools
-- `mcp.NewToolResultError(msg)` for errors — never return a Go error from a handler
-- Logger injected on `Server`, never package-level slog
+- All tool handlers registered via `tools/<module>.register(mcp, admin)` — no module-level state
+- Return `ToolResult(content=..., structured_content=...)` from handlers
+- Raise exceptions for errors — FastMCP converts them to MCP error responses
 - MCP App UI resources use MIME `text/html;profile=mcp-app` and URI scheme `ui://`
-- Tool `_meta.ui.resourceUri` is set via `tool.Meta.AdditionalFields` after `mcp.NewTool()`
-- UI HTML must use DOM methods (`textContent`, `createElement`) — no `innerHTML` with data
-- MCP Apps protocol: app sends `ui/initialize`, receives `ui/notifications/tool-result` with tool JSON, can call back via `tools/call`
+- `meta={"ui": {"resourceUri": RESOURCE_URI}}` on every `ToolResult` to link tool output to the UI
+- UI HTML must use DOM methods (`textContent`, `createElement`) — no `innerHTML` with untrusted data
+- MCP Apps protocol: app sends `ui/initialize`, receives `ui/notifications/tool-result` with tool JSON
 
-## Build
+## UI development — PatternFly and Red Hat UX
 
-```bash
-make build       # outputs bin/mcp-gateway-admin
-go vet ./...
-```
+All UI surfaces in this project (MCP App HTML, any future dashboards) must follow Red Hat's
+design system. Before writing any UI code:
+
+1. **Query the `patternfly-docs` MCP** (available in `.mcp.json`) for component APIs, usage
+   guidelines, and accessibility requirements. Prefer PatternFly components over custom HTML
+   whenever an equivalent exists.
+
+2. **Consult [ux.redhat.com](https://ux.redhat.com)** for Red Hat-specific design tokens,
+   brand guidelines, iconography, and patterns that extend PatternFly for Red Hat products.
+
+3. **Key principles**:
+   - Use PatternFly CSS custom properties (`--pf-*`) for colors, spacing, and typography — never
+     hardcode hex values or pixel sizes that diverge from the design system.
+   - Follow PatternFly's accessibility standards (WCAG 2.1 AA): semantic HTML, ARIA roles where
+     needed, keyboard navigation for all interactive elements.
+   - The MCP App HTML (`ui://catalog/mcp-app.html`) runs in a sandboxed iframe — load PatternFly
+     from a CDN (e.g., `unpkg.com`) and keep the bundle minimal (CSS + relevant JS only).
+   - Match the visual language of the Red Hat Hybrid Cloud Console where the gateway is deployed.
