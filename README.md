@@ -4,6 +4,34 @@ Admin MCP server for the [mcp-gateway](../mcp-gateway) platform. Exposes Kuberne
 
 Target audience: platform engineers operating a running gateway.
 
+## UI Widgets
+
+Four interactive MCP App widgets render as sandboxed iframes in MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, ChatGPT, …).
+
+### Tool Catalog — `ui://mcp-gateway-catalog`
+
+Browse all 40+ federated tools grouped by server. Click any row to expand the full description and input schema parameters.
+
+![Tool Catalog](docs/screenshots/tool-catalog.png)
+
+### Gateway Health Dashboard — `ui://mcp-gateway-health`
+
+Live broker status, reachability summary, and per-server tool counts at a glance.
+
+![Gateway Health Dashboard](docs/screenshots/gateway-health.png)
+
+### Registration Manager — `ui://mcp-gateway-registrations`
+
+Table of all `MCPServerRegistration` CRs with toggle switches to enable or disable each server without `kubectl`.
+
+### Virtual Server Viewer — `ui://mcp-gateway-virtual-servers`
+
+Accordion view of `MCPVirtualServer` CRs showing upstreams, status conditions, and spec fields.
+
+See [sample-prompts.md](sample-prompts.md) for the exact phrases that open each widget.
+
+---
+
 ## Tools
 
 | Tool | Description |
@@ -14,15 +42,10 @@ Target audience: platform engineers operating a running gateway.
 | `list_virtual_servers` | List all `MCPVirtualServer` CRs |
 | `get_virtual_server` | Get a single virtual server |
 | `get_gateway_status` | Call the broker `/status` endpoint |
-| `render_tool_catalog` | Return live catalog data; MCP Apps hosts render an interactive UI |
-
-## Resource
-
-| URI | Description |
-|---|---|
-| `ui://mcp-gateway-catalog` | Interactive tool catalog rendered as a sandboxed iframe by MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, …) |
-
-See [sample-prompts.md](sample-prompts.md) for example queries for each tool.
+| `render_tool_catalog` | Open the interactive tool catalog widget |
+| `render_registrations` | Open the registration manager widget |
+| `render_gateway_health` | Open the gateway health dashboard widget |
+| `render_virtual_servers` | Open the virtual server viewer widget |
 
 ## Requirements
 
