@@ -92,11 +92,11 @@ body {
   border: none; background: transparent; cursor: pointer;
   font-size: 13px; font-family: inherit;
   color: var(--pf-t--global--text--color--subtle);
-  border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap;
+  white-space: nowrap;
 }
+/* Active indicator: shim only; PF CSS overrides this with its ::after approach */
 .pf-v6-c-tabs__item.pf-m-current .pf-v6-c-tabs__link {
   color: var(--pf-t--global--color--blue--40);
-  border-bottom-color: var(--pf-t--global--color--blue--40);
   font-weight: var(--pf-t--global--font--weight--bold);
 }
 .pf-v6-c-tabs__link:hover { color: var(--pf-t--global--text--color--regular); }
