@@ -250,8 +250,6 @@ def register(mcp: FastMCP, srv) -> None:
         app=AppConfig(csp=ResourceCSP(resource_domains=["https://unpkg.com"])),
     )
     def catalog_ui() -> str:
-        import sys
-        print(">>> resources/read called for catalog UI", file=sys.stderr, flush=True)
         return CATALOG_HTML
 
     @mcp.tool(
@@ -342,15 +340,16 @@ def register(mcp: FastMCP, srv) -> None:
             "brokerOK": broker_ok,
             "noK8sData": no_k8s_data,
         }
-        import sys
-        print(f">>> render_tool_catalog — returning result", file=sys.stderr, flush=True)
+        ui_meta = {"ui": {"resourceUri": CATALOG_RESOURCE_URI}}
         ui_supported = ctx.client_supports_extension(UI_EXTENSION_ID)
         if ui_supported:
             return ToolResult(
                 content=f"Tool catalog rendered: {len(servers)} servers, {total_tools} tools.",
                 structured_content=data,
+                meta=ui_meta,
             )
         return ToolResult(
             content=json.dumps(data),
             structured_content=data,
+            meta=ui_meta,
         )
