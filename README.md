@@ -24,9 +24,13 @@ Live broker status, reachability summary, and per-server tool counts at a glance
 
 Table of all `MCPServerRegistration` CRs with toggle switches to enable or disable each server without `kubectl`.
 
+![Registration Manager](docs/screenshots/registration-manager.png)
+
 ### Virtual Server Viewer — `ui://mcp-gateway-virtual-servers`
 
 Accordion view of `MCPVirtualServer` CRs showing upstreams, status conditions, and spec fields.
+
+![Virtual Server Viewer](docs/screenshots/virtual-server-viewer.png)
 
 See [sample-prompts.md](sample-prompts.md) for the exact phrases that open each widget.
 
