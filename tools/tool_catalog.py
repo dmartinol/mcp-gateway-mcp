@@ -445,15 +445,15 @@ function switchServer(idx) {
   if (srv.prefix) infoEl.appendChild(el("span", "server-prefix", srv.prefix));
   if (srv.hint)   infoEl.appendChild(el("span", "server-hint", srv.hint));
 
-  const cats = (srv.categories || []).join(", ");
+  const srvCats = srv.categories || [];
   infoEl.appendChild(el("span", "server-meta-info",
-    (srv.toolCount || 0) + " tools" + (cats ? " · " + cats : "")));
+    (srv.toolCount || 0) + " tools" + (srvCats.length ? " · " + srvCats.join(", ") : "")));
 
   // Category chips
   const chipsEl = document.getElementById("category-chips");
   chipsEl.textContent = "";
   activeChip = null;
-  const cats = srv.categories || [];
+  const cats = srvCats;
   if (cats.length > 0) {
     cats.forEach(cat => {
       const chip = el("button", "chip", cat);
