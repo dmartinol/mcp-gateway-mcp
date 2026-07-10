@@ -206,17 +206,59 @@ body {
 .status-dot--unknown { background: var(--pf-t--global--text--color--subtle); }
 .tool-row {
   display: flex; align-items: baseline; gap: 12px;
-  padding: 5px 12px;
+  padding: 5px 12px; position: relative; cursor: pointer;
   border-bottom: 1px solid var(--pf-t--global--border--color--default);
 }
 .tool-row:last-child { border-bottom: none; }
 .tool-row.hidden { display: none; }
+.tool-row.is-expanded { background: var(--pf-t--global--background--color--secondary--default); }
+.tool-chevron { font-size: 10px; color: var(--pf-t--global--text--color--subtle); width: 12px; flex-shrink: 0; }
 .tool-name {
   font-family: var(--pf-t--global--font--family--mono);
   font-size: 13px; color: var(--pf-t--global--color--blue--40);
   min-width: 200px; flex-shrink: 0;
 }
-.tool-desc { font-size: 12px; color: var(--pf-t--global--text--color--subtle); }
+.tool-desc { font-size: 12px; color: var(--pf-t--global--text--color--subtle); flex: 1; }
+.copy-btn {
+  opacity: 0; border: none; background: transparent; cursor: pointer;
+  font-size: 11px; padding: 1px 4px; border-radius: 3px;
+  color: var(--pf-t--global--text--color--subtle);
+  transition: opacity 0.15s; flex-shrink: 0;
+}
+.copy-btn.copied { color: var(--pf-t--global--icon--color--status--success--default); }
+.tool-row:hover .copy-btn { opacity: 1; }
+.tool-detail {
+  padding: 8px 12px 8px 36px;
+  border-bottom: 1px solid var(--pf-t--global--border--color--default);
+  background: var(--pf-t--global--background--color--secondary--default);
+  font-size: 12px;
+}
+.tool-detail.hidden { display: none; }
+.detail-desc { color: var(--pf-t--global--text--color--subtle); margin-bottom: 6px; }
+.detail-params { display: flex; flex-direction: column; gap: 3px; }
+.detail-param { display: flex; gap: 8px; align-items: baseline; }
+.param-name { font-family: var(--pf-t--global--font--family--mono); font-size: 12px; color: var(--pf-t--global--color--blue--40); }
+.param-type { font-size: 11px; color: var(--pf-t--global--text--color--subtle); }
+.param-required { font-size: 10px; font-weight: bold; color: #c9190b; }
+.param-desc { font-size: 11px; color: var(--pf-t--global--text--color--subtle); }
+.category-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--pf-t--global--border--color--default);
+}
+.category-chips:empty { display: none; }
+.chip {
+  display: inline-flex; align-items: center;
+  padding: 2px 10px; border-radius: 30px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--pf-t--global--border--color--default);
+  background: transparent; color: var(--pf-t--global--text--color--subtle);
+  transition: all 0.1s;
+}
+.chip.active {
+  background: var(--pf-t--global--color--blue--40);
+  border-color: var(--pf-t--global--color--blue--40); color: #fff;
+}
 .no-tools {
   padding: 8px 12px; font-size: 12px;
   color: var(--pf-t--global--text--color--subtle); font-style: italic;
@@ -252,6 +294,7 @@ body {
 <div id="warn" aria-live="polite"></div>
 <div class="pf-v6-c-tabs" id="server-tabs"></div>
 <div class="server-info-bar" id="server-info" aria-live="polite"></div>
+<div id="category-chips" class="category-chips"></div>
 <main class="catalog-main" id="main" role="tabpanel" aria-label="Tool list">
   <div class="tool-list-container" id="tool-list">
     <div class="catalog-loading">Loading catalog…</div>
@@ -332,7 +375,7 @@ function makeAlert(message) {
   return wrapper;
 }
 
-let allServers = [], catalogData = {}, currentIdx = 0;
+let allServers = [], catalogData = {}, currentIdx = 0, activeChip = null;
 
 function buildTabs() {
   const tabsEl = document.getElementById("server-tabs");
@@ -406,6 +449,30 @@ function switchServer(idx) {
   infoEl.appendChild(el("span", "server-meta-info",
     (srv.toolCount || 0) + " tools" + (cats ? " · " + cats : "")));
 
+  // Category chips
+  const chipsEl = document.getElementById("category-chips");
+  chipsEl.textContent = "";
+  activeChip = null;
+  const cats = srv.categories || [];
+  if (cats.length > 0) {
+    cats.forEach(cat => {
+      const chip = el("button", "chip", cat);
+      chip.onclick = () => {
+        if (activeChip === cat) {
+          activeChip = null;
+          chip.classList.remove("active");
+          filterByCategory(null);
+        } else {
+          chipsEl.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+          activeChip = cat;
+          chip.classList.add("active");
+          filterByCategory(cat);
+        }
+      };
+      chipsEl.appendChild(chip);
+    });
+  }
+
   const listEl = document.getElementById("tool-list");
   listEl.textContent = "";
 
@@ -413,9 +480,53 @@ function switchServer(idx) {
     srv.tools.forEach(t => {
       const row = el("div", "tool-row");
       row.dataset.tool = "";
+
+      const chevron = el("span", "tool-chevron", "▶");
+      row.appendChild(chevron);
       row.appendChild(el("span", "tool-name", t.federatedName));
-      row.appendChild(el("span", "tool-desc", t.description));
+      row.appendChild(el("span", "tool-desc", t.description || ""));
+
+      const copyBtn = el("button", "copy-btn", "⎘");
+      copyBtn.title = "Copy tool name";
+      copyBtn.onclick = (e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(t.federatedName).then(() => {
+          copyBtn.textContent = "✓";
+          copyBtn.classList.add("copied");
+          setTimeout(() => { copyBtn.textContent = "⎘"; copyBtn.classList.remove("copied"); }, 1500);
+        }).catch(() => {});
+      };
+      row.appendChild(copyBtn);
+
+      const detail = el("div", "tool-detail hidden");
+      const schema = t.inputSchema || {};
+      const props = schema.properties || {};
+      const required = schema.required || [];
+      const propKeys = Object.keys(props);
+      if (t.description) detail.appendChild(el("div", "detail-desc", t.description));
+      if (propKeys.length) {
+        const params = el("div", "detail-params");
+        propKeys.forEach(k => {
+          const p = props[k];
+          const prow = el("div", "detail-param");
+          prow.appendChild(el("span", "param-name", k));
+          prow.appendChild(el("span", "param-type", p.type || "any"));
+          if (required.includes(k)) prow.appendChild(el("span", "param-required", "required"));
+          if (p.description) prow.appendChild(el("span", "param-desc", p.description));
+          params.appendChild(prow);
+        });
+        detail.appendChild(params);
+      }
+      if (!t.description && !propKeys.length) detail.appendChild(el("div", "detail-desc", "No description available."));
+
+      row.onclick = () => {
+        const open = detail.classList.toggle("hidden") === false;
+        row.classList.toggle("is-expanded", open);
+        chevron.textContent = open ? "▼" : "▶";
+      };
+
       listEl.appendChild(row);
+      listEl.appendChild(detail);
     });
   } else {
     listEl.appendChild(el("div", "no-tools",
@@ -455,18 +566,34 @@ window.render = render;
 
 function filterTools(query) {
   const q = query.toLowerCase();
-  document.querySelectorAll("#tool-list [data-tool]").forEach(row => {
-    row.classList.toggle("hidden", q !== "" && !row.textContent.toLowerCase().includes(q));
+  // Reset category chip when search is active
+  if (q) {
+    activeChip = null;
+    document.querySelectorAll("#category-chips .chip").forEach(c => c.classList.remove("active"));
+  }
+  document.querySelectorAll("#tool-list .tool-row").forEach(row => {
+    const hide = q !== "" && !row.textContent.toLowerCase().includes(q);
+    row.classList.toggle("hidden", hide);
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains("tool-detail") && hide) next.classList.add("hidden");
   });
 }
 window.filterTools = filterTools;
+
+function filterByCategory(cat) {
+  document.querySelectorAll("#tool-list .tool-row").forEach(row => {
+    if (!cat) { row.classList.remove("hidden"); return; }
+    row.classList.toggle("hidden", row.textContent.toLowerCase().indexOf(cat.toLowerCase()) === -1);
+  });
+}
+window.filterByCategory = filterByCategory;
 </script>
 </body>
 </html>"""
 
 
-def _fetch_broker_tools(broker_url: str, http) -> dict:
-    """Returns {short_server_name: [tool_name, ...]} via broker discover_tools."""
+def _fetch_broker_tools(broker_url: str, http) -> list:
+    """Returns flat list of all tools with descriptions + inputSchema via broker tools/list."""
     base = broker_url + "/mcp"
     hdrs = {"Content-Type": "application/json", "Accept": "application/json"}
     try:
@@ -481,24 +608,36 @@ def _fetch_broker_tools(broker_url: str, http) -> dict:
         r.raise_for_status()
         session_id = r.headers.get("Mcp-Session-Id") or r.headers.get("mcp-session-id", "")
         if not session_id:
-            return {}
+            return []
         sh = {**hdrs, "Mcp-Session-Id": session_id}
         http.post(base, json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
                   timeout=5, headers=sh)
-        r2 = http.post(base, json={
-            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
-            "params": {"name": "discover_tools", "arguments": {}},
-        }, timeout=10, headers=sh)
-        r2.raise_for_status()
-        text = r2.json().get("result", {}).get("content", [{}])[0].get("text", "{}")
-        out = {}
-        for srv in json.loads(text).get("servers", []):
-            raw = srv.get("name", "")
-            short = raw.rsplit("/", 1)[-1] if "/" in raw else raw
-            out[short] = [{"federatedName": t, "description": ""} for t in srv.get("tools", [])]
-        return out
+        all_tools = []
+        cursor = None
+        req_id = 2
+        while True:
+            params = {}
+            if cursor:
+                params["cursor"] = cursor
+            r2 = http.post(base, json={
+                "jsonrpc": "2.0", "id": req_id, "method": "tools/list",
+                "params": params,
+            }, timeout=10, headers=sh)
+            r2.raise_for_status()
+            result = r2.json().get("result", {})
+            for t in result.get("tools", []):
+                all_tools.append({
+                    "federatedName": t["name"],
+                    "description": t.get("description", ""),
+                    "inputSchema": t.get("inputSchema", {}),
+                })
+            cursor = result.get("nextCursor")
+            if not cursor:
+                break
+            req_id += 1
+        return all_tools
     except Exception:
-        return {}
+        return []
 
 
 def register(mcp: FastMCP, srv) -> None:
@@ -540,8 +679,8 @@ def register(mcp: FastMCP, srv) -> None:
         except Exception:
             pass
 
-        # 3. Fetch per-server tool lists from broker
-        broker_tools = _fetch_broker_tools(srv.broker_url, srv.http) if broker_ok else {}
+        # 3. Fetch per-server tool lists from broker (tools/list with descriptions + inputSchema)
+        broker_tools = _fetch_broker_tools(srv.broker_url, srv.http) if broker_ok else []
 
         # 4. Build broker_by_name lookup keyed by short name (after last '/')
         broker_by_name = {}
@@ -565,6 +704,8 @@ def register(mcp: FastMCP, srv) -> None:
                 bd = broker_by_name[name]
                 is_reachable = bd["reachable"]
                 tool_count = bd["toolCount"]
+            prefix = getattr(spec, "prefix", "") or name
+            server_tools = [t for t in broker_tools if t["federatedName"].startswith(prefix)]
             cs = {
                 "name": name,
                 "prefix": getattr(spec, "prefix", "") or "",
@@ -573,7 +714,7 @@ def register(mcp: FastMCP, srv) -> None:
                 "hint": getattr(spec, "hint", "") or "",
                 "isReachable": is_reachable,
                 "toolCount": tool_count,
-                "tools": broker_tools.get(name, []),
+                "tools": server_tools,
             }
             total_tools += tool_count
             servers.append(cs)
@@ -586,12 +727,13 @@ def register(mcp: FastMCP, srv) -> None:
                 raw = bs.get("name", "")
                 short = raw.rsplit("/", 1)[-1] if "/" in raw else raw
                 tool_count = int(bs.get("totalTools", 0))
+                server_tools = [t for t in broker_tools if t["federatedName"].startswith(short)]
                 servers.append({
                     "name": short,
                     "prefix": "", "state": "", "categories": [], "hint": "",
                     "isReachable": bool(bs.get("ready", False)),
                     "toolCount": tool_count,
-                    "tools": broker_tools.get(short, []),
+                    "tools": server_tools,
                 })
                 total_tools += tool_count
 
