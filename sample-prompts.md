@@ -83,3 +83,39 @@ Example natural-language queries for each tool exposed by `mcp-gateway-admin`.
 > Give me a catalog of all tools grouped by server so I can browse them.
 
 > Refresh the tool catalog.
+
+---
+
+## `render_registrations`
+
+> Show me the registration manager.
+
+> Open the interactive registration manager.
+
+> Let me enable or disable registrations from a UI.
+
+> Show all MCP server registrations with toggle controls.
+
+---
+
+## `render_gateway_health`
+
+> Show the gateway health dashboard.
+
+> Open the health dashboard — which servers are reachable?
+
+> Give me a live status overview of the gateway and all upstream servers.
+
+> How healthy is the gateway right now?
+
+---
+
+## `render_virtual_servers`
+
+> Show me the virtual server viewer.
+
+> Open the virtual server explorer.
+
+> Let me browse the MCPVirtualServer resources and their routing rules.
+
+> Show the upstreams and status conditions for each virtual server.
