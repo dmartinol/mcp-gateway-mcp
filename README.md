@@ -1,42 +1,53 @@
 # mcp-gateway-mcp
 
-Admin MCP server for the [mcp-gateway](../mcp-gateway) platform. Exposes Kubernetes CRD state and live broker status as MCP tools and a browser-renderable UI resource — no `kubectl` required.
+Admin MCP server for the [mcp-gateway](../mcp-gateway) platform. Exposes Kubernetes CRD state and live broker status as MCP tools and browser-renderable UI widgets — no `kubectl` required.
 
 Target audience: platform engineers operating a running gateway.
 
 ## UI Widgets
 
-Four interactive MCP App widgets render as sandboxed iframes in MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, ChatGPT, …).
+Four interactive MCP App widgets render as sandboxed iframes in MCP Apps-compatible hosts (Claude, Cursor, VS Code Copilot, ChatGPT, …). See [sample-prompts.md](sample-prompts.md) for the phrases that open each one.
 
-### Tool Catalog — `ui://mcp-gateway-catalog`
+<details>
+<summary><strong>Tool Catalog</strong> — <code>ui://mcp-gateway-catalog</code></summary>
 
-Browse all 40+ federated tools grouped by server. Click any row to expand the full description and input schema parameters.
+Browse all federated tools grouped by server. Click any row to expand the full description and input schema parameters.
 
 ![Tool Catalog](docs/screenshots/tool-catalog.png)
 
-### Gateway Health Dashboard — `ui://mcp-gateway-health`
+</details>
+
+<details>
+<summary><strong>Gateway Health Dashboard</strong> — <code>ui://mcp-gateway-health</code></summary>
 
 Live broker status, reachability summary, and per-server tool counts at a glance.
 
 ![Gateway Health Dashboard](docs/screenshots/gateway-health.png)
 
-### Registration Manager — `ui://mcp-gateway-registrations`
+</details>
+
+<details>
+<summary><strong>Registration Manager</strong> — <code>ui://mcp-gateway-registrations</code></summary>
 
 Table of all `MCPServerRegistration` CRs with toggle switches to enable or disable each server without `kubectl`.
 
 ![Registration Manager](docs/screenshots/registration-manager.png)
 
-### Virtual Server Viewer — `ui://mcp-gateway-virtual-servers`
+</details>
+
+<details>
+<summary><strong>Virtual Server Viewer</strong> — <code>ui://mcp-gateway-virtual-servers</code></summary>
 
 Accordion view of `MCPVirtualServer` CRs showing upstreams, status conditions, and spec fields.
 
 ![Virtual Server Viewer](docs/screenshots/virtual-server-viewer.png)
 
-See [sample-prompts.md](sample-prompts.md) for the exact phrases that open each widget.
-
----
+</details>
 
 ## Tools
+
+<details>
+<summary>10 tools — click to expand</summary>
 
 | Tool | Description |
 |---|---|
@@ -51,6 +62,8 @@ See [sample-prompts.md](sample-prompts.md) for the exact phrases that open each 
 | `render_gateway_health` | Open the gateway health dashboard widget |
 | `render_virtual_servers` | Open the virtual server viewer widget |
 
+</details>
+
 ## Requirements
 
 - Python 3.11+
@@ -58,17 +71,10 @@ See [sample-prompts.md](sample-prompts.md) for the exact phrases that open each 
 - Kubeconfig pointing to a cluster running `mcp-gateway` CRDs
 - (Optional) Port-forward to the broker for live status
 
-## Configuration
+## Quick start
 
-| Flag | Env var | Default | Notes |
-|---|---|---|---|
-| `--kubeconfig` | `KUBECONFIG` | `~/.kube/config` | Falls back to in-cluster config |
-| `--namespace` | `MCP_ADMIN_NAMESPACE` | `mcp-servers` | Namespace where `MCPServerRegistration` / `MCPVirtualServer` CRDs live |
-| `--broker-url` | `MCP_BROKER_URL` | `http://localhost:8080` | Broker `/status` endpoint |
-| `--transport` | `MCP_ADMIN_TRANSPORT` | `stdio` | `stdio` or `http` |
-| `--addr` | `MCP_ADMIN_ADDR` | `:8899` | HTTP bind address (used when `--transport http`) |
-
-## Quick start (hosted cluster)
+<details>
+<summary>Hosted cluster setup</summary>
 
 ```bash
 # Forward the broker port
@@ -84,7 +90,29 @@ uv run server.py --namespace mcp-servers --broker-url http://localhost:8080
 uv run server.py --transport http --namespace mcp-servers --broker-url http://localhost:8080
 ```
 
-## Claude Desktop config
+| Item | Value |
+|---|---|
+| Gateway public URL | `https://mcp.apps.hosted-services.ai5.appeng.rhecoeng.com` |
+| CRD namespace | `mcp-servers` |
+| Broker service | `svc/mcp-gateway` in `mcp-gateway-system` (port 8080) |
+| Registered servers | `assisted-service-mcp` (24 tools, prefix `assisted_`), `insights-mcp` (16 tools, prefix `insights_`) |
+
+</details>
+
+## Configuration
+
+| Flag | Env var | Default | Notes |
+|---|---|---|---|
+| `--kubeconfig` | `KUBECONFIG` | `~/.kube/config` | Falls back to in-cluster config |
+| `--namespace` | `MCP_ADMIN_NAMESPACE` | `mcp-servers` | Namespace where CRDs live |
+| `--broker-url` | `MCP_BROKER_URL` | `http://localhost:8080` | Broker `/status` endpoint |
+| `--transport` | `MCP_ADMIN_TRANSPORT` | `stdio` | `stdio` or `http` |
+| `--addr` | `MCP_ADMIN_ADDR` | `:8899` | HTTP bind address |
+
+## Client config
+
+<details>
+<summary>Claude Desktop</summary>
 
 ```json
 {
@@ -99,7 +127,10 @@ uv run server.py --transport http --namespace mcp-servers --broker-url http://lo
 }
 ```
 
-## Cursor config (`~/.cursor/mcp.json`)
+</details>
+
+<details>
+<summary>Cursor (<code>~/.cursor/mcp.json</code>)</summary>
 
 ```json
 {
@@ -114,11 +145,4 @@ uv run server.py --transport http --namespace mcp-servers --broker-url http://lo
 }
 ```
 
-## Hosted cluster details
-
-| Item | Value |
-|---|---|
-| Gateway public URL | `https://mcp.apps.hosted-services.ai5.appeng.rhecoeng.com` |
-| CRD namespace | `mcp-servers` |
-| Broker service | `svc/mcp-gateway` in `mcp-gateway-system` (port 8080) |
-| Registered servers | `assisted-service-mcp` (24 tools, prefix `assisted_`), `insights-mcp` (16 tools, prefix `insights_`) |
+</details>
