@@ -64,7 +64,7 @@ body {
   font-family: var(--pf-t--global--font--family--body);
   font-size: var(--pf-t--global--font--size--md);
   color: var(--pf-t--global--text--color--regular);
-  background: var(--pf-t--global--background--color--primary--default);
+  background: transparent;
   margin: 0; padding: 0;
 }
 
@@ -181,6 +181,7 @@ body {
 
 /* Scrollable tool list — fixed px cap so only one scrollbar exists */
 .tool-list-container {
+  background: var(--pf-t--global--background--color--primary--default);
   border: 1px solid var(--pf-t--global--border--color--default);
   border-radius: 6px;
   max-height: 300px;
