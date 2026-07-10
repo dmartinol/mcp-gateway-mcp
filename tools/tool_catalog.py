@@ -593,7 +593,12 @@ window.filterByCategory = filterByCategory;
 
 
 def _fetch_broker_tools(broker_url: str, http) -> list:
-    """Returns flat list of all tools with descriptions + inputSchema via broker tools/list."""
+    """Returns flat list of all federated tools with descriptions + inputSchema.
+
+    Tries tools/list first (standard MCP); falls back to the broker's
+    discover_tools custom tool if tools/list returns nothing (older brokers
+    that don't expose federated tools via the standard method).
+    """
     base = broker_url + "/mcp"
     hdrs = {"Content-Type": "application/json", "Accept": "application/json"}
     try:
@@ -612,13 +617,13 @@ def _fetch_broker_tools(broker_url: str, http) -> list:
         sh = {**hdrs, "Mcp-Session-Id": session_id}
         http.post(base, json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
                   timeout=5, headers=sh)
+
+        # Try tools/list (standard MCP — works when broker exposes federated tools)
         all_tools = []
         cursor = None
         req_id = 2
         while True:
-            params = {}
-            if cursor:
-                params["cursor"] = cursor
+            params = {"cursor": cursor} if cursor else {}
             r2 = http.post(base, json={
                 "jsonrpc": "2.0", "id": req_id, "method": "tools/list",
                 "params": params,
@@ -635,6 +640,20 @@ def _fetch_broker_tools(broker_url: str, http) -> list:
             if not cursor:
                 break
             req_id += 1
+
+        if all_tools:
+            return all_tools
+
+        # Fallback: broker's discover_tools (returns grouped-by-server tool names)
+        r3 = http.post(base, json={
+            "jsonrpc": "2.0", "id": req_id + 1, "method": "tools/call",
+            "params": {"name": "discover_tools", "arguments": {}},
+        }, timeout=10, headers=sh)
+        r3.raise_for_status()
+        text = r3.json().get("result", {}).get("content", [{}])[0].get("text", "{}")
+        for srv in json.loads(text).get("servers", []):
+            for t in srv.get("tools", []):
+                all_tools.append({"federatedName": t, "description": "", "inputSchema": {}})
         return all_tools
     except Exception:
         return []
