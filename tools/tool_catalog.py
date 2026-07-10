@@ -484,7 +484,6 @@ function switchServer(idx) {
       const chevron = el("span", "tool-chevron", "▶");
       row.appendChild(chevron);
       row.appendChild(el("span", "tool-name", t.federatedName));
-      row.appendChild(el("span", "tool-desc", t.description || ""));
 
       const copyBtn = el("button", "copy-btn", "⎘");
       copyBtn.title = "Copy tool name";
